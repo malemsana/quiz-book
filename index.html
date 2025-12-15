@@ -1,0 +1,327 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<title>Notebook Flashcards</title>
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+
+<style>
+/* ===================== THEME ===================== */
+:root {
+  --bg-main: #020617;
+  --bg-soft: #0f172a;
+
+  --card: #f8fafc;
+  --border: #e2e8f0;
+
+  --q-accent: #60a5fa;
+  --a-accent: #4ade80;
+
+  --text-dark: #020617;
+  --text-light: #e5e7eb;
+  --muted: #94a3b8;
+}
+
+/* ===================== BASE ===================== */
+* { box-sizing: border-box; }
+
+body {
+  margin: 0;
+  font-family: system-ui, -apple-system, sans-serif;
+  background: radial-gradient(circle at top, #1e293b, var(--bg-main));
+  color: var(--text-light);
+  min-height: 100vh;
+  display: flex;
+  justify-content: center;
+  align-items: center;
+}
+
+.app {
+  width: 95%;
+  max-width: 580px;
+}
+
+/* ===================== HEADER ===================== */
+.header {
+  text-align: center;
+  margin-bottom: 26px;
+}
+
+.header h1 {
+  margin: 0;
+  font-size: 22px;
+}
+
+.header p {
+  margin-top: 6px;
+  font-size: 14px;
+  color: var(--muted);
+}
+
+/* ===================== HOME ===================== */
+.deck {
+  background: #020617;
+  border: 1px solid #334155;
+  border-radius: 16px;
+  padding: 16px;
+  margin-bottom: 14px;
+  cursor: pointer;
+  transition: transform .15s, box-shadow .15s;
+}
+
+.deck:hover {
+  transform: translateY(-2px);
+  box-shadow: 0 12px 30px rgba(0,0,0,.5);
+}
+
+.deck h3 {
+  margin: 0;
+  font-size: 16px;
+}
+
+.deck p {
+  margin: 6px 0 0;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* ===================== CARD ===================== */
+.scene {
+  perspective: 1600px;
+}
+
+.card {
+  position: relative;
+  height: 300px;
+  transform-style: preserve-3d;
+  transition: transform .7s cubic-bezier(.4,0,.2,1);
+}
+
+.card.flip {
+  transform: rotateY(180deg);
+}
+
+.face {
+  position: absolute;
+  inset: 0;
+  background: var(--card);
+  border-radius: 20px;
+  padding: 34px;
+  backface-visibility: hidden;
+  display: flex;
+  flex-direction: column;
+  justify-content: center;
+  color: var(--text-dark);
+  box-shadow:
+    0 30px 60px rgba(0,0,0,.55),
+    inset 0 0 0 1px var(--border);
+}
+
+.face.answer {
+  transform: rotateY(180deg);
+}
+
+/* QUESTION / ANSWER STYLING */
+.face.question {
+  box-shadow:
+    0 30px 60px rgba(96,165,250,.35),
+    inset 0 0 0 2px rgba(96,165,250,.25);
+}
+
+.face.answer {
+  box-shadow:
+    0 30px 60px rgba(74,222,128,.35),
+    inset 0 0 0 2px rgba(74,222,128,.25);
+}
+
+.label {
+  font-size: 12px;
+  letter-spacing: .14em;
+  text-transform: uppercase;
+  margin-bottom: 16px;
+}
+
+.face.question .label { color: var(--q-accent); }
+.face.answer .label { color: var(--a-accent); }
+
+.content {
+  font-size: 20px;
+  line-height: 1.6;
+}
+
+.hint {
+  margin-top: auto;
+  font-size: 13px;
+  color: #64748b;
+}
+
+/* ===================== CONTROLS ===================== */
+.controls {
+  display: flex;
+  gap: 14px;
+  margin-top: 26px;
+}
+
+button {
+  flex: 1;
+  padding: 12px;
+  border-radius: 14px;
+  border: none;
+  background: #1e293b;
+  color: var(--text-light);
+  cursor: pointer;
+  box-shadow: inset 0 0 0 1px #334155;
+}
+
+button:hover {
+  background: #334155;
+}
+
+.footer {
+  margin-top: 16px;
+  text-align: center;
+  font-size: 13px;
+  color: var(--muted);
+}
+
+/* ===================== HIDE ===================== */
+.hidden { display: none; }
+</style>
+</head>
+
+<body>
+
+<div class="app">
+
+  <!-- HOME -->
+  <div id="home">
+    <div class="header">
+      <h1>📓 Notebook Flashcards</h1>
+      <p>Select a deck to begin</p>
+    </div>
+
+    <div id="deckList"></div>
+  </div>
+
+  <!-- QUIZ -->
+  <div id="quiz" class="hidden">
+    <div class="header">
+      <h1 id="deckTitle"></h1>
+      <p id="deckDesc"></p>
+    </div>
+
+    <div class="scene">
+      <div class="card" id="card">
+        <div class="face question">
+          <div class="label">Question</div>
+          <div class="content" id="q"></div>
+          <div class="hint">Click to reveal answer</div>
+        </div>
+        <div class="face answer">
+          <div class="label">Answer</div>
+          <div class="content" id="a"></div>
+          <div class="hint">Click to go back</div>
+        </div>
+      </div>
+    </div>
+
+    <div class="controls">
+      <button id="prev">Previous</button>
+      <button id="next">Next</button>
+    </div>
+
+    <div class="footer" id="counter"></div>
+  </div>
+
+</div>
+
+<script>
+/* ===================== DECKS ===================== */
+const DECKS = [
+  {
+    title: "Home science",
+    desc: "Short quiz",
+    url: "https://cdn.jsdelivr.net/gh/malemsana/quiz-book@main/home-science.csv"
+  },
+];
+
+/* ===================== ELEMENTS ===================== */
+const home = document.getElementById("home");
+const quiz = document.getElementById("quiz");
+const deckList = document.getElementById("deckList");
+
+const card = document.getElementById("card");
+const q = document.getElementById("q");
+const a = document.getElementById("a");
+const counter = document.getElementById("counter");
+
+const prev = document.getElementById("prev");
+const next = document.getElementById("next");
+const deckTitle = document.getElementById("deckTitle");
+const deckDesc = document.getElementById("deckDesc");
+
+let data = [];
+let index = 0;
+
+/* ===================== HOME RENDER ===================== */
+DECKS.forEach(deck => {
+  const div = document.createElement("div");
+  div.className = "deck";
+  div.innerHTML = `<h3>${deck.title}</h3><p>${deck.desc}</p>`;
+  div.onclick = () => startDeck(deck);
+  deckList.appendChild(div);
+});
+
+/* ===================== QUIZ LOGIC ===================== */
+function startDeck(deck) {
+  home.classList.add("hidden");
+  quiz.classList.remove("hidden");
+
+  deckTitle.textContent = deck.title;
+  deckDesc.textContent = deck.desc;
+
+  fetch(deck.url)
+    .then(r => r.text())
+    .then(parseCSV)
+    .catch(() => {
+      q.textContent = "Failed to load deck.";
+      a.textContent = "";
+    });
+}
+
+function parseCSV(text) {
+  const lines = text.trim().split("\n").slice(1);
+  data = lines.map(line => {
+    const [q, a] = line.split(/,(.+)/);
+    return { q: q.trim(), a: a.trim() };
+  });
+
+  index = 0;
+  card.classList.remove("flip");
+  update();
+}
+
+function update() {
+  q.textContent = data[index].q;
+  a.textContent = data[index].a;
+  counter.textContent = `Card ${index + 1} of ${data.length}`;
+}
+
+/* ===================== EVENTS ===================== */
+card.onclick = () => card.classList.toggle("flip");
+
+next.onclick = () => {
+  index = (index + 1) % data.length;
+  card.classList.remove("flip");
+  update();
+};
+
+prev.onclick = () => {
+  index = (index - 1 + data.length) % data.length;
+  card.classList.remove("flip");
+  update();
+};
+</script>
+
+</body>
+</html>
