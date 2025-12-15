@@ -44,7 +44,7 @@ body {
 /* ===================== HEADER ===================== */
 .header {
   text-align: center;
-  margin-bottom: 26px;
+  margin-bottom: 20px;
 }
 .header h1 { margin: 0; font-size: 22px; }
 .header p { margin-top: 6px; font-size: 14px; color: var(--muted); }
@@ -67,33 +67,12 @@ body {
 .deck h3 { margin: 0; font-size: 16px; }
 .deck p { margin: 6px 0 0; font-size: 13px; color: var(--muted); }
 
-/* ===================== TOOLBAR ===================== */
-.toolbar {
-  display: flex;
-  justify-content: space-between;
-  margin-bottom: 16px;
-}
-.tool-btn {
-  background: transparent;
-  color: var(--muted);
-  border: 1px solid #334155;
-  padding: 8px 12px;
-  font-size: 12px;
-  border-radius: 8px;
-  cursor: pointer;
-  transition: all 0.2s;
-}
-.tool-btn:hover {
-  background: var(--btn-hover);
-  color: var(--text-light);
-}
-
 /* ===================== CARD ===================== */
 .scene { perspective: 1600px; margin-bottom: 20px; }
 
 .card {
   position: relative;
-  height: 320px; /* Slightly taller for mobile */
+  height: 320px;
   transform-style: preserve-3d;
   transition: transform .6s cubic-bezier(.4,0,.2,1);
   cursor: pointer;
@@ -110,10 +89,9 @@ body {
   display: flex;
   flex-direction: column;
   justify-content: center;
-  align-items: center; /* Center text visually */
+  align-items: center; 
   text-align: center;
   color: var(--text-dark);
-  box-shadow: 0 30px 60px rgba(0,0,0,.55), inset 0 0 0 1px var(--border);
 }
 
 .face.answer { transform: rotateY(180deg); }
@@ -170,26 +148,27 @@ body {
   transition: background 0.2s;
 }
 .ctrl-btn:hover { background: var(--btn-hover); }
-.ctrl-btn:active { transform: scale(0.98); }
 
 .footer-nav {
   margin-top: 16px;
-  display: flex;
-  justify-content: center;
-  align-items: center;
-  gap: 10px;
+  text-align: center;
   font-size: 13px;
   color: var(--muted);
 }
-.jump-link {
-  color: var(--q-accent);
-  text-decoration: underline;
+
+.back-btn {
+  background: transparent;
+  color: var(--muted);
+  border: none;
+  font-size: 14px;
   cursor: pointer;
+  text-decoration: underline;
+  margin-bottom: 10px;
+  display: block;
 }
 
 /* ===================== UTILS ===================== */
 .hidden { display: none !important; }
-.loading { opacity: 0.5; pointer-events: none; }
 </style>
 </head>
 
@@ -209,15 +188,7 @@ body {
   <!-- QUIZ SCREEN -->
   <div id="quiz" class="hidden">
     
-    <!-- Top Toolbar -->
-    <div class="toolbar">
-      <button class="tool-btn" onclick="goHome()">← Home</button>
-      <button class="tool-btn" onclick="shuffleDeck()">🔀 Randomize</button>
-    </div>
-
-    <div class="header" style="margin-bottom: 20px;">
-      <h1 id="deckTitle" style="font-size: 18px;"></h1>
-    </div>
+    <button class="back-btn" onclick="goHome()">← Back to list</button>
 
     <div class="scene">
       <div class="card" id="card">
@@ -225,13 +196,13 @@ body {
         <div class="face question">
           <div class="label">Question</div>
           <div class="content" id="q"></div>
-          <div class="hint">Tap to flip / Spacebar</div>
+          <div class="hint">Tap to flip</div>
         </div>
         <!-- Back -->
         <div class="face answer">
           <div class="label">Answer</div>
           <div class="content" id="a"></div>
-          <div class="hint">Tap to flip / Spacebar</div>
+          <div class="hint">Tap to flip</div>
         </div>
       </div>
     </div>
@@ -243,8 +214,6 @@ body {
 
     <div class="footer-nav">
       <span id="counter">Loading...</span>
-      <span>•</span>
-      <span class="jump-link" onclick="jumpToCard()">Jump to #</span>
     </div>
   </div>
 
@@ -255,15 +224,14 @@ body {
 const DECKS = [
   {
     title: "Home Science",
-    desc: "Basics of Home Science",
+    desc: "Randomized Questions",
     url: "https://cdn.jsdelivr.net/gh/malemsana/quiz-book@main/home-science.csv"
   },
-  // Add more decks here
+  // You can add more decks here
 ];
 
 /* ===================== STATE ===================== */
-let originalData = []; // Keeps original order
-let currentData = [];  // Can be shuffled
+let currentData = [];
 let index = 0;
 let isFlipped = false;
 
@@ -275,10 +243,8 @@ const card = document.getElementById("card");
 const qEl = document.getElementById("q");
 const aEl = document.getElementById("a");
 const counter = document.getElementById("counter");
-const deckTitle = document.getElementById("deckTitle");
 
 /* ===================== INITIALIZE ===================== */
-// Render Deck List
 DECKS.forEach(deck => {
   const div = document.createElement("div");
   div.className = "deck";
@@ -289,75 +255,81 @@ DECKS.forEach(deck => {
 
 /* ===================== LOGIC ===================== */
 
-// Load and Fetch CSV
 function loadDeck(deck) {
   home.classList.add("hidden");
   quiz.classList.remove("hidden");
-  deckTitle.textContent = deck.title;
+  
   qEl.textContent = "Loading...";
   aEl.textContent = "...";
-  
-  // Reset state
   index = 0;
   isFlipped = false;
   card.classList.remove("flip");
 
   fetch(deck.url)
-    .then(r => {
-      if (!r.ok) throw new Error("Network error");
-      return r.text();
-    })
+    .then(r => r.text())
     .then(text => {
       parseCSV(text);
+      shuffleDeck(); // <--- Randomize immediately
       updateCard();
     })
     .catch(err => {
-      qEl.textContent = "Error loading deck.";
-      aEl.textContent = "Check console or URL.";
       console.error(err);
+      qEl.textContent = "Error loading deck.";
     });
 }
 
-// Improved CSV Parser (Handles quotes better)
+// SIMPLER PARSER: Handles "Question","Answer" correctly
 function parseCSV(text) {
   const lines = text.trim().split("\n");
-  // Remove header if it looks like "Question,Answer"
-  if(lines[0].toLowerCase().includes("question")) lines.shift();
+  
+  // Remove header if present
+  if (lines.length > 0 && lines[0].toLowerCase().includes("question")) {
+    lines.shift();
+  }
 
-  originalData = lines.map(line => {
-    // Regex to split by comma, ignoring commas inside quotes
-    const parts = line.match(/(".*?"|[^",\s]+)(?=\s*,|\s*$)/g) || [];
-    // Fallback for simple splitting if regex fails or simple CSV
-    if (parts.length < 2) {
-        const simple = line.split(",");
-        return { q: simple[0], a: simple.slice(1).join(",") }; 
+  currentData = lines.map(line => {
+    // 1. Try splitting by "," (Quote-Comma-Quote)
+    if (line.includes('","')) {
+        const parts = line.split('","');
+        // Clean up leading/trailing quotes
+        const q = parts[0].replace(/^"/, "").trim(); 
+        const a = parts[1] ? parts[1].replace(/"$/, "").trim() : ""; 
+        return { q, a };
+    } 
+    // 2. Fallback for simple Comma separation
+    else {
+        const parts = line.split(",");
+        if (parts.length < 2) return null;
+        return { 
+            q: parts[0].trim(), 
+            a: parts.slice(1).join(",").trim() 
+        };
     }
-    
-    // Clean up quotes
-    const clean = (str) => str ? str.replace(/^"|"$/g, '').trim() : "";
-    return { q: clean(parts[0]), a: clean(parts[1]) };
-  }).filter(item => item.q && item.a); // Remove empty lines
-
-  currentData = [...originalData]; // Copy to current
+  }).filter(item => item !== null && item.q !== "");
 }
 
-// Update UI
+function shuffleDeck() {
+  for (let i = currentData.length - 1; i > 0; i--) {
+    const j = Math.floor(Math.random() * (i + 1));
+    [currentData[i], currentData[j]] = [currentData[j], currentData[i]];
+  }
+}
+
 function updateCard() {
   if (currentData.length === 0) return;
-  
   const item = currentData[index];
   qEl.textContent = item.q;
   aEl.textContent = item.a;
-  
   counter.textContent = `${index + 1} / ${currentData.length}`;
 }
 
-// Navigation
+/* ===================== NAVIGATION ===================== */
+
 function nextCard() {
   if (currentData.length === 0) return;
   index = (index + 1) % currentData.length;
   resetFlip();
-  setTimeout(updateCard, 150); // slight delay for animation
+  setTimeout(updateCard, 150);
 }
 
 function prevCard() {
@@ -367,69 +339,33 @@ function prevCard() {
   setTimeout(updateCard, 150);
 }
 
-function toggleFlip() {
-  isFlipped = !isFlipped;
-  card.classList.toggle("flip", isFlipped);
-}
-
 function resetFlip() {
   isFlipped = false;
   card.classList.remove("flip");
 }
 
-/* ===================== FEATURES ===================== */
-
-// 1. Shuffle
-function shuffleDeck() {
-  // Fisher-Yates Shuffle
-  for (let i = currentData.length - 1; i > 0; i--) {
-    const j = Math.floor(Math.random() * (i + 1));
-    [currentData[i], currentData[j]] = [currentData[j], currentData[i]];
-  }
-  index = 0;
-  resetFlip();
-  updateCard();
-  // Visual feedback could be added here
-}
-
-// 2. Go Home
 function goHome() {
   quiz.classList.add("hidden");
   home.classList.remove("hidden");
-  currentData = []; // Clear memory
-}
-
-// 3. Jump to Card
-function jumpToCard() {
-  const num = prompt(`Enter card number (1 - ${currentData.length}):`);
-  const target = parseInt(num);
-  
-  if (!isNaN(target) && target >= 1 && target <= currentData.length) {
-    index = target - 1;
-    resetFlip();
-    updateCard();
-  }
+  currentData = [];
 }
 
 /* ===================== EVENTS ===================== */
-
-// Click events
 document.getElementById("next").onclick = nextCard;
 document.getElementById("prev").onclick = prevCard;
-card.onclick = toggleFlip;
+card.onclick = () => {
+  isFlipped = !isFlipped;
+  card.classList.toggle("flip", isFlipped);
+};
 
-// Keyboard Shortcuts
+// Simple Keyboard Support
 document.addEventListener("keydown", (e) => {
   if (quiz.classList.contains("hidden")) return;
-  
-  switch(e.key) {
-    case "ArrowRight": nextCard(); break;
-    case "ArrowLeft":  prevCard(); break;
-    case " ":          // Spacebar
-    case "Enter":      
-      e.preventDefault(); // Prevent scrolling
-      toggleFlip(); 
-      break;
+  if (e.key === "ArrowRight") nextCard();
+  if (e.key === "ArrowLeft") prevCard();
+  if (e.key === " " || e.key === "Enter") {
+    isFlipped = !isFlipped;
+    card.classList.toggle("flip", isFlipped);
   }
 });
 
